@@ -35,8 +35,6 @@ namespace xivModdingFramework.Exd.FileTypes
 
         private readonly string _langCode;
 
-        private readonly DirectoryInfo _gameDirectory;
-
         private readonly Index _index;
         private readonly Dat _dat;
 
@@ -54,10 +52,9 @@ namespace xivModdingFramework.Exd.FileTypes
         /// <param name="lang">The language in which to read the data.</param>
         public Ex(DirectoryInfo gameDirectory, XivLanguage lang)
         {
-            _gameDirectory = gameDirectory;
             _langCode = lang.GetLanguageCode();
-            _index = new Index(_gameDirectory);
-            _dat = new Dat(_gameDirectory);
+            _index = new Index(gameDirectory);
+            _dat = new Dat(gameDirectory);
         }
 
         /// <summary>
@@ -69,10 +66,9 @@ namespace xivModdingFramework.Exd.FileTypes
         /// <param name="gameDirectory">The install directory for the game.</param>
         public Ex(DirectoryInfo gameDirectory)
         {
-            _gameDirectory = gameDirectory;
             _langCode = XivLanguage.English.GetLanguageCode();
-            _index = new Index(_gameDirectory);
-            _dat = new Dat(_gameDirectory);
+            _index = new Index(gameDirectory);
+            _dat = new Dat(gameDirectory);
         }
 
         /// <summary>
