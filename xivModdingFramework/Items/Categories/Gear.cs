@@ -27,6 +27,7 @@ using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
 using xivModdingFramework.Items.DataContainers;
 using xivModdingFramework.Items.Enums;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 using xivModdingFramework.Textures.DataContainers;
@@ -42,16 +43,14 @@ namespace xivModdingFramework.Items.Categories
     /// </summary>
     public class Gear
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivLanguage _xivLanguage;
-        private readonly Index _index;
         private static object _gearLock = new object();
 
-        public Gear(DirectoryInfo gameDirectory, XivLanguage xivLanguage)
+        public Gear(Modding modding, XivLanguage xivLanguage)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _xivLanguage = xivLanguage;
-            _index = new Index(_gameDirectory);
         }
 
         /// <summary>
@@ -73,7 +72,7 @@ namespace xivModdingFramework.Items.Categories
 
             xivGearList.AddRange(GetMissingGear());
 
-            var ex = new Ex(_gameDirectory, _xivLanguage);
+            var ex = new Ex(_modding, _xivLanguage);
             var itemDictionary = await ex.ReadExData(XivEx.item);
 
             // Loops through all the items in the item exd files
@@ -319,7 +318,7 @@ namespace xivModdingFramework.Items.Categories
         public async Task<List<XivRace>> GetRacesForTextures(XivGear xivGear, XivDataFile dataFile)
         {
             // Get the material version for the item from the imc file
-            var imc = new Imc(_gameDirectory, dataFile);
+            var imc = new Imc(_modding, dataFile);
             var gearVersion = (await imc.GetImcInfo(xivGear, xivGear.ModelInfo)).Version.ToString().PadLeft(4, '0');
 
             var modelID = xivGear.ModelInfo.ModelID.ToString().PadLeft(4, '0');
@@ -371,7 +370,7 @@ namespace xivModdingFramework.Items.Categories
             }
 
             // get the list of hashed file names from the mtrl folder
-            var files = await _index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), dataFile);
+            var files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), dataFile);
 
             // Loop through each entry in the dictionary
             foreach (var testFile in testFilesDictionary)
@@ -450,7 +449,7 @@ namespace xivModdingFramework.Items.Categories
             }
 
             // get the list of hashed file names from the mtrl folder
-            var files = await _index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mdlFolder), dataFile);
+            var files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mdlFolder), dataFile);
 
             // Loop through each entry in the dictionary
             foreach (var testFile in testFilesDictionary)
@@ -518,7 +517,7 @@ namespace xivModdingFramework.Items.Categories
                         }
                     });
 
-                    variantList = _index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
+                    variantList = _modding.Index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
 
                     if (variantList.Count > 0)
                     {
@@ -543,7 +542,7 @@ namespace xivModdingFramework.Items.Categories
                     }
                 }));
 
-                variantList = _index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
+                variantList = _modding.Index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
             }
 
             if (!type.Equals("Weapon"))
@@ -554,7 +553,7 @@ namespace xivModdingFramework.Items.Categories
                     var mtrlFile = "";
 
                     var mtrlFolderHashes =
-                        await _index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), XivDataFile._04_Chara);
+                        await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), XivDataFile._04_Chara);
 
                     foreach (var race in IDRaceDictionary.Keys)
                     {
@@ -630,7 +629,7 @@ namespace xivModdingFramework.Items.Categories
             var iconHQFolder = $"{iconFolder}/hq";
             var iconFile = $"{iconString.PadLeft(6, '0')}.tex";
 
-            if (await _index.FileExists(HashGenerator.GetHash(iconFile), HashGenerator.GetHash(iconFolder),
+            if (await _modding.Index.FileExists(HashGenerator.GetHash(iconFile), HashGenerator.GetHash(iconFolder),
                 XivDataFile._06_Ui))
             {
                 ttpList.Add(new TexTypePath
@@ -643,7 +642,7 @@ namespace xivModdingFramework.Items.Categories
             }
 
 
-            if (await _index.FileExists(HashGenerator.GetHash(iconFile), HashGenerator.GetHash(iconHQFolder),
+            if (await _modding.Index.FileExists(HashGenerator.GetHash(iconFile), HashGenerator.GetHash(iconHQFolder),
                 XivDataFile._06_Ui))
             {
                 ttpList.Add(new TexTypePath

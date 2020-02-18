@@ -41,8 +41,7 @@ namespace xivModdingFramework.Models.FileTypes
     public class Mdl
     {
         private const string MdlExtension = ".mdl";
-        private readonly DirectoryInfo _gameDirectory;
-        private readonly DirectoryInfo _modListDirectory;
+        private readonly Modding _modding;
         private readonly XivDataFile _dataFile;
 
         /// <summary>
@@ -53,11 +52,9 @@ namespace xivModdingFramework.Models.FileTypes
         /// </remarks>
         private const int ModelMultiplier = 10;
 
-        public Mdl(DirectoryInfo gameDirectory, XivDataFile dataFile)
+        public Mdl(Modding modding, XivDataFile dataFile)
         {
-            _gameDirectory = gameDirectory;
-            _modListDirectory = new DirectoryInfo(Path.Combine(gameDirectory.Parent.Parent.FullName, XivStrings.ModlistFilePath));
-
+            _modding = modding;
             _dataFile = dataFile;
         }
 
@@ -72,20 +69,17 @@ namespace xivModdingFramework.Models.FileTypes
         /// <returns>An XivMdl structure containing all mdl data.</returns>
         public async Task<XivMdl> GetMdlData(IItemModel itemModel, XivRace xivRace, XivModelInfo secondaryModel = null, string mdlStringPath = null, int originalOffset = 0, string ringSide = null)
         {
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
-            var modding = new Modding(_gameDirectory);
             var getShapeData = true;
 
             var itemType = ItemType.GetItemType(itemModel);
 
             var mdlPath = GetMdlPath(itemModel, xivRace, itemType, secondaryModel, mdlStringPath, ringSide);
 
-            var offset = await index.GetDataOffset(HashGenerator.GetHash(mdlPath.Folder), HashGenerator.GetHash(mdlPath.File),
+            var offset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(mdlPath.Folder), HashGenerator.GetHash(mdlPath.File),
                 _dataFile);
 
-            if (await modding.IsModEnabled($"{mdlPath.Folder}/{mdlPath.File}", false) == XivModStatus.Enabled &&
-                originalOffset == 0)
+            var (isModEnabled, _) = await _modding.IsModEnabled($"{mdlPath.Folder}/{mdlPath.File}", false);
+            if (isModEnabled == XivModStatus.Enabled && originalOffset == 0)
             {
                 getShapeData = false;
             }
@@ -100,7 +94,7 @@ namespace xivModdingFramework.Models.FileTypes
                 throw new Exception($"Could not find offset for {mdlPath.Folder}/{mdlPath.File}");
             }
 
-            var mdlData = await dat.GetType3Data(offset, _dataFile);
+            var mdlData = await _modding.Dat.GetType3Data(offset, _dataFile);
 
             var xivMdl = new XivMdl {MdlPath = mdlPath};
 
@@ -1342,7 +1336,7 @@ namespace xivModdingFramework.Models.FileTypes
             // A dictionary containing any warnings raised by the import in the format <Warning Title, Warning Message>
             var warningsDictionary = new Dictionary<string, string>();
 
-            var dae = new Dae(_gameDirectory, _dataFile, pluginTarget);
+            var dae = new Dae(_modding, _dataFile, pluginTarget);
 
             // We only use the highest quality LoD for importing which is LoD 0
             var lod0 = xivMdl.LoDList[0];
@@ -2332,15 +2326,13 @@ namespace xivModdingFramework.Models.FileTypes
         {
             try
             {
-                var modding = new Modding(_gameDirectory);
-
                 var isAlreadyModified = false;
 
                 var itemType = ItemType.GetItemType(item);
 
                 var mdlPath = Path.Combine(xivMdl.MdlPath.Folder, xivMdl.MdlPath.File);
 
-                var modEntry = await modding.TryGetModEntry(mdlPath);
+                var modEntry = await _modding.TryGetModEntry(mdlPath);
 
                 // Vertex Info
                 #region Vertex Info Block
@@ -4716,8 +4708,6 @@ namespace xivModdingFramework.Models.FileTypes
                 // Add the header to the MDL data
                 compressedMDLData.InsertRange(0, datHeader);
 
-                var dat = new Dat(_gameDirectory);
-
                 var filePath = Path.Combine(xivMdl.MdlPath.Folder, xivMdl.MdlPath.File);
 
                 if (rawDataOnly)
@@ -4726,7 +4716,7 @@ namespace xivModdingFramework.Models.FileTypes
                 }
                 else
                 {
-                    await dat.WriteToDat(compressedMDLData, modEntry, filePath, item.ItemCategory, item.Name, _dataFile, source, 3);
+                    await _modding.Dat.WriteToDat(compressedMDLData, modEntry, filePath, item.ItemCategory, item.Name, _dataFile, source, 3);
                 }
 
                 #endregion

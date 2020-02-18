@@ -54,6 +54,7 @@ namespace xivModdingFramework.Mods.DataContainers
         /// The status of the mod
         /// </summary>
         public bool Active { get; set; }
+        public string ActiveModPack { get; set; }
 
         /// <summary>
         /// The mod entry

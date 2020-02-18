@@ -45,26 +45,19 @@ namespace xivModdingFramework.Textures.FileTypes
     /// </summary>
     public class Tex
     {
+        private readonly Modding _modding;
         private const string TexExtension = ".tex";
-        private readonly DirectoryInfo _gameDirectory;
-        private readonly Index _index;
-        private readonly Dat _dat;
         private readonly XivDataFile _dataFile;
         private Dictionary<string, int> _indexFileDictionary;
         private readonly object texLock = new object();
 
-        public Tex(DirectoryInfo gameDirectory)
-        {
-            _gameDirectory = gameDirectory;
-            _index = new Index(_gameDirectory);
-            _dat = new Dat(_gameDirectory);
+        public Tex(Modding modding) {
+            _modding = modding;
         }
 
-        public Tex(DirectoryInfo gameDirectory, XivDataFile dataFile)
+        public Tex(Modding modding, XivDataFile dataFile)
         {
-            _gameDirectory = gameDirectory;
-            _index = new Index(_gameDirectory);
-            _dat = new Dat(_gameDirectory);
+            _modding = modding;
             _dataFile = dataFile;
         }
 
@@ -84,7 +77,7 @@ namespace xivModdingFramework.Textures.FileTypes
                 hashedfile = HashGenerator.GetHash(file);
             }
 
-            offset = await _index.GetDataOffset(hashedfolder, hashedfile, ttp.DataFile);
+            offset = await _modding.Index.GetDataOffset(hashedfolder, hashedfile, ttp.DataFile);
 
             if (offset == 0)
             {
@@ -97,12 +90,12 @@ namespace xivModdingFramework.Textures.FileTypes
             {
                 if (ttp.Path.Contains(".atex"))
                 {
-                    var atex = new ATex(_gameDirectory, ttp.DataFile);
+                    var atex = new ATex(_modding, ttp.DataFile);
                     xivTex = await atex.GetATexData(offset);
                 }
                 else
                 {
-                    xivTex = await _dat.GetType4Data(offset, ttp.DataFile);
+                    xivTex = await _modding.Dat.GetType4Data(offset, ttp.DataFile);
                 }
             }
             catch (Exception ex)
@@ -117,7 +110,7 @@ namespace xivModdingFramework.Textures.FileTypes
 
         public async Task GetIndexFileDictionary()
         {
-            _indexFileDictionary = await _index.GetFileDictionary(_dataFile);
+            _indexFileDictionary = await _modding.Index.GetFileDictionary(_dataFile);
         }
 
         public async Task<XivTex> GetTexDataPreFetchedIndex(TexTypePath ttp)
@@ -143,12 +136,12 @@ namespace xivModdingFramework.Textures.FileTypes
             {
                 if (ttp.Path.Contains(".atex"))
                 {
-                    var atex = new ATex(_gameDirectory, ttp.DataFile);
+                    var atex = new ATex(_modding, ttp.DataFile);
                     xivTex = await atex.GetATexData(offset);
                 }
                 else
                 {
-                    xivTex = await _dat.GetType4Data(offset, ttp.DataFile);
+                    xivTex = await _modding.Dat.GetType4Data(offset, ttp.DataFile);
                 }
             }
             catch (Exception ex)
@@ -184,7 +177,7 @@ namespace xivModdingFramework.Textures.FileTypes
                 id = xivGear.SecondaryModelInfo.ModelID.ToString().PadLeft(4, '0');
                 bodyVer = xivGear.SecondaryModelInfo.Body.ToString().PadLeft(4, '0');
 
-                var imc = new Imc(_gameDirectory, xivGear.DataFile);
+                var imc = new Imc(_modding, xivGear.DataFile);
                 version = (await imc.GetImcInfo(itemModel, xivGear.SecondaryModelInfo)).Version.ToString().PadLeft(4, '0');
 
                 if (imc.ChangedType)
@@ -199,7 +192,7 @@ namespace xivModdingFramework.Textures.FileTypes
                 if (itemType != XivItemType.human && itemType != XivItemType.furniture)
                 {
                     // Get the mtrl version for the given item from the imc file
-                    var imc = new Imc(_gameDirectory, dataFile);
+                    var imc = new Imc(_modding, dataFile);
                     version = (await imc.GetImcInfo(itemModel, itemModel.ModelInfo)).Version.ToString().PadLeft(4, '0');
                 }
             }
@@ -272,7 +265,7 @@ namespace xivModdingFramework.Textures.FileTypes
             }
 
             // Get a list of hashed mtrl files that are in the given folder
-            var files = await _index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), dataFile);
+            var files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), dataFile);
 
             // append the part char to the mtrl file and see if its hashed value is within the files list
             var partList =
@@ -293,7 +286,7 @@ namespace xivModdingFramework.Textures.FileTypes
                 }
 
                 // Get a list of hashed mtrl files that are in the given folder
-                files = await _index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), dataFile);
+                files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), dataFile);
 
                 // append the part char to the mtrl file and see if its hashed value is within the files list
                 partList =
@@ -313,7 +306,7 @@ namespace xivModdingFramework.Textures.FileTypes
 
             var folderPath = $"ui/map/{path}";
 
-            var files = await _index.GetAllHashedFilesInFolder(HashGenerator.GetHash(folderPath), XivDataFile._06_Ui);
+            var files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(folderPath), XivDataFile._06_Ui);
 
             foreach (var mapType in MapTypeDictionary)
             {
@@ -558,12 +551,10 @@ namespace xivModdingFramework.Textures.FileTypes
         {
             var offset = 0;
 
-            var modding = new Modding(_gameDirectory);
-
             if (File.Exists(ddsFileDirectory.FullName))
             {
                 // Check if the texture being imported has been imported before
-                var modEntry = await modding.TryGetModEntry(xivTex.TextureTypeAndPath.Path);
+                var modEntry = await _modding.TryGetModEntry(xivTex.TextureTypeAndPath.Path);
 
                 using (var br = new BinaryReader(File.OpenRead(ddsFileDirectory.FullName)))
                 {
@@ -632,11 +623,11 @@ namespace xivModdingFramework.Textures.FileTypes
                         {
                             var DDSInfo = await DDS.ReadDDS(br, xivTex, newWidth, newHeight, newMipCount);
 
-                            newTex.AddRange(_dat.MakeType4DatHeader(xivTex, DDSInfo.mipPartOffsets, DDSInfo.mipPartCounts, uncompressedLength, newMipCount, newWidth, newHeight));
+                            newTex.AddRange(_modding.Dat.MakeType4DatHeader(xivTex, DDSInfo.mipPartOffsets, DDSInfo.mipPartCounts, uncompressedLength, newMipCount, newWidth, newHeight));
                             newTex.AddRange(MakeTextureInfoHeader(xivTex, newWidth, newHeight, newMipCount));
                             newTex.AddRange(DDSInfo.compressedDDS);
 
-                            offset = await _dat.WriteToDat(newTex, modEntry, xivTex.TextureTypeAndPath.Path,
+                            offset = await _modding.Dat.WriteToDat(newTex, modEntry, xivTex.TextureTypeAndPath.Path,
                                 item.ItemCategory, item.Name, xivTex.TextureTypeAndPath.DataFile, source, 4);
                         }
                         else
@@ -645,7 +636,7 @@ namespace xivModdingFramework.Textures.FileTypes
                             newTex.AddRange(MakeTextureInfoHeader(xivTex, newWidth, newHeight, newMipCount));
                             newTex.AddRange(br.ReadBytes(uncompressedLength));
 
-                            offset = await _dat.ImportType2Data(newTex.ToArray(), item.Name, xivTex.TextureTypeAndPath.Path,
+                            offset = await _modding.Dat.ImportType2Data(newTex.ToArray(), item.Name, xivTex.TextureTypeAndPath.Path,
                                 item.ItemCategory, source);
                         }
                     }
@@ -667,12 +658,10 @@ namespace xivModdingFramework.Textures.FileTypes
         {
             var offset = 0;
 
-            var modding = new Modding(_gameDirectory);
-
             if (File.Exists(bmpFileDirectory.FullName))
             {
                 // Check if the texture being imported has been imported before
-                var modEntry = await modding.TryGetModEntry(xivTex.TextureTypeAndPath.Path);
+                var modEntry = await _modding.TryGetModEntry(xivTex.TextureTypeAndPath.Path);
                 var ddsContainer = new DDSContainer();
                 CompressionFormat compressionFormat;
 
@@ -777,11 +766,11 @@ namespace xivModdingFramework.Textures.FileTypes
                             {
                                 var DDSInfo = await DDS.ReadDDS(br, xivTex, newWidth, newHeight, newMipCount);
 
-                                newTex.AddRange(_dat.MakeType4DatHeader(xivTex, DDSInfo.mipPartOffsets, DDSInfo.mipPartCounts, (int)uncompressedLength, newMipCount, newWidth, newHeight));
+                                newTex.AddRange(_modding.Dat.MakeType4DatHeader(xivTex, DDSInfo.mipPartOffsets, DDSInfo.mipPartCounts, (int)uncompressedLength, newMipCount, newWidth, newHeight));
                                 newTex.AddRange(MakeTextureInfoHeader(xivTex, newWidth, newHeight, newMipCount));
                                 newTex.AddRange(DDSInfo.compressedDDS);
 
-                                offset = await _dat.WriteToDat(newTex, modEntry, xivTex.TextureTypeAndPath.Path,
+                                offset = await _modding.Dat.WriteToDat(newTex, modEntry, xivTex.TextureTypeAndPath.Path,
                                     item.ItemCategory, item.Name, xivTex.TextureTypeAndPath.DataFile, source, 4);
                             }
                             else
@@ -790,7 +779,7 @@ namespace xivModdingFramework.Textures.FileTypes
                                 newTex.AddRange(MakeTextureInfoHeader(xivTex, newWidth, newHeight, newMipCount));
                                 newTex.AddRange(br.ReadBytes((int)uncompressedLength));
 
-                                offset = await _dat.ImportType2Data(newTex.ToArray(), item.Name, xivTex.TextureTypeAndPath.Path,
+                                offset = await _modding.Dat.ImportType2Data(newTex.ToArray(), item.Name, xivTex.TextureTypeAndPath.Path,
                                     item.ItemCategory, source);
                             }
                         }
@@ -889,7 +878,7 @@ namespace xivModdingFramework.Textures.FileTypes
                         {
                             var DDSInfo = await DDS.ReadDDS(br, xivTex, newWidth, newHeight, newMipCount);
 
-                            newTex.AddRange(_dat.MakeType4DatHeader(xivTex, DDSInfo.mipPartOffsets, DDSInfo.mipPartCounts, uncompressedLength, newMipCount, newWidth, newHeight));
+                            newTex.AddRange(_modding.Dat.MakeType4DatHeader(xivTex, DDSInfo.mipPartOffsets, DDSInfo.mipPartCounts, uncompressedLength, newMipCount, newWidth, newHeight));
                             newTex.AddRange(MakeTextureInfoHeader(xivTex, newWidth, newHeight, newMipCount));
                             newTex.AddRange(DDSInfo.compressedDDS);
 
@@ -960,7 +949,7 @@ namespace xivModdingFramework.Textures.FileTypes
             xivMtrl.ColorSetData = colorSetData;
             xivMtrl.ColorSetExtraData = colorSetExtraData;
 
-            var mtrl = new Mtrl(_gameDirectory, xivMtrl.TextureTypePathList[0].DataFile, lang);
+            var mtrl = new Mtrl(_modding, xivMtrl.TextureTypePathList[0].DataFile, lang);
             return await mtrl.ImportMtrl(xivMtrl, item, source);
         }
 
@@ -1012,7 +1001,7 @@ namespace xivModdingFramework.Textures.FileTypes
             xivMtrl.ColorSetData = colorSetData;
             xivMtrl.ColorSetExtraData = colorSetExtraData;
 
-            var mtrl = new Mtrl(_gameDirectory, xivMtrl.TextureTypePathList[0].DataFile, lang);
+            var mtrl = new Mtrl(_modding, xivMtrl.TextureTypePathList[0].DataFile, lang);
             return mtrl.CreateMtrlFile(xivMtrl, item);
         }
 

@@ -23,6 +23,7 @@ using xivModdingFramework.Helpers;
 using xivModdingFramework.Items;
 using xivModdingFramework.Items.Enums;
 using xivModdingFramework.Items.Interfaces;
+using xivModdingFramework.Mods;
 using xivModdingFramework.SqPack.FileTypes;
 using xivModdingFramework.Textures.DataContainers;
 using xivModdingFramework.Variants.FileTypes;
@@ -32,12 +33,12 @@ namespace xivModdingFramework.Textures.FileTypes
 {
     public class ATex
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivDataFile _dataFile;
 
-        public ATex(DirectoryInfo gameDirectory, XivDataFile dataFile)
+        public ATex(Modding modding, XivDataFile dataFile)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _dataFile = dataFile;
         }
 
@@ -50,14 +51,13 @@ namespace xivModdingFramework.Textures.FileTypes
         {
             var atexTexTypePathList = new List<TexTypePath>();
 
-            var index = new Index(_gameDirectory);
-            var avfx = new Avfx(_gameDirectory, _dataFile);
+            var avfx = new Avfx(_modding, _dataFile);
 
             var itemType = ItemType.GetItemType(itemModel);
 
             var vfxPath = await GetVfxPath(itemModel, itemType);
 
-            var vfxOffset = await index.GetDataOffset(HashGenerator.GetHash(vfxPath.Folder), HashGenerator.GetHash(vfxPath.File),
+            var vfxOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(vfxPath.Folder), HashGenerator.GetHash(vfxPath.File),
                 _dataFile);
 
             if (vfxOffset == 0)
@@ -89,8 +89,7 @@ namespace xivModdingFramework.Textures.FileTypes
         /// <returns>An XivTex with all the texture data</returns>
         public async Task<XivTex> GetATexData(int offset)
         {
-            var dat = new Dat(_gameDirectory);
-            var atexData = await dat.GetType2Data(offset, _dataFile);
+            var atexData = await _modding.Dat.GetType2Data(offset, _dataFile);
 
             var xivTex = new XivTex();
 
@@ -122,7 +121,7 @@ namespace xivModdingFramework.Textures.FileTypes
         private async Task<(string Folder, string File)> GetVfxPath(IItemModel itemModel, XivItemType itemType)
         {
             // get the vfx version from the imc file
-            var imc = new Imc(_gameDirectory, _dataFile);
+            var imc = new Imc(_modding, _dataFile);
             var imcInfo = await imc.GetImcInfo(itemModel, itemModel.ModelInfo);
             int vfx = imcInfo.Vfx;
 

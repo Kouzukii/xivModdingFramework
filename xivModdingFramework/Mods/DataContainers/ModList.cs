@@ -52,14 +52,6 @@ namespace xivModdingFramework.Mods.DataContainers
         /// The list of Mods
         /// </summary>
         public List<Mod> Mods { get; set; }
-
-        [JsonIgnore] public Lazy<MultiValueDictionary<string, Mod>> ModsByModPacks;
-
-        public ModList() {
-            ModsByModPacks = new Lazy<MultiValueDictionary<string, Mod>>(() => {
-                return new MultiValueDictionary<string, Mod>(Mods);
-            });
-        }
     }
 
     public class Mod

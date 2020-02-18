@@ -28,6 +28,7 @@ using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
 using xivModdingFramework.Items.Interfaces;
 using xivModdingFramework.Models.DataContainers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 
@@ -38,15 +39,15 @@ namespace xivModdingFramework.Models.FileTypes
     /// </summary>
     public class Sklb
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivDataFile _dataFile;
         private  IItem _item;
         private  XivMdl _xivMdl;
         private string _hairSklbName;
 
-        public Sklb(DirectoryInfo gameDirectory, XivDataFile dataFile)
+        public Sklb(Modding modding, XivDataFile dataFile)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _dataFile = dataFile;
         }
 
@@ -131,9 +132,6 @@ namespace xivModdingFramework.Models.FileTypes
         /// <param name="category">The items category</param>
         private async Task GetSkeleton(string modelName, string category)
         {
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
-
             var skelFolder = "";
             var skelFile = "";
             var slotAbr = "";
@@ -174,7 +172,7 @@ namespace xivModdingFramework.Models.FileTypes
             }
 
             // Continue only if the skeleton file exists
-            if (!await index.FileExists(HashGenerator.GetHash(skelFile), HashGenerator.GetHash(skelFolder), _dataFile))
+            if (!await _modding.Index.FileExists(HashGenerator.GetHash(skelFile), HashGenerator.GetHash(skelFolder), _dataFile))
             {
                 // Sometimes for face skeletons id 0001 does not exist but 0002 does
                 if (_item.ItemCategory.Equals(XivStrings.Face))
@@ -183,7 +181,7 @@ namespace xivModdingFramework.Models.FileTypes
                     skelFolder = string.Format(XivStrings.EquipSkelFolder, modelName.Substring(1, 4), slotAbr, slotAbr[0], "0002");
                     skelFile = string.Format(XivStrings.EquipSkelFile, modelName.Substring(1, 4), slotAbr[0], "0002");
 
-                    if (!await index.FileExists(HashGenerator.GetHash(skelFile), HashGenerator.GetHash(skelFolder),
+                    if (!await _modding.Index.FileExists(HashGenerator.GetHash(skelFile), HashGenerator.GetHash(skelFolder),
                         _dataFile))
                     {
                         return;
@@ -195,14 +193,14 @@ namespace xivModdingFramework.Models.FileTypes
                 }
             }
 
-            var offset = await index.GetDataOffset(HashGenerator.GetHash(skelFolder), HashGenerator.GetHash(skelFile), _dataFile);
+            var offset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(skelFolder), HashGenerator.GetHash(skelFile), _dataFile);
 
             if (offset == 0)
             {
                 throw new Exception($"Could not find offest for {skelFolder}/{skelFile}");
             }
 
-            var sklbData = await dat.GetType2Data(offset, _dataFile);
+            var sklbData = await _modding.Dat.GetType2Data(offset, _dataFile);
 
             using (var br = new BinaryReader(new MemoryStream(sklbData)))
             {

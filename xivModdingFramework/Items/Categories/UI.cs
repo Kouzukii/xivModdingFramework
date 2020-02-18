@@ -24,6 +24,7 @@ using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
 using xivModdingFramework.HUD.FileTypes;
 using xivModdingFramework.Items.DataContainers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 
 namespace xivModdingFramework.Items.Categories
@@ -33,15 +34,15 @@ namespace xivModdingFramework.Items.Categories
     /// </summary>
     public class UI
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivLanguage _xivLanguage;
         private readonly Ex _ex;
 
-        public UI(DirectoryInfo gameDirectory, XivLanguage xivLanguage)
+        public UI(Modding modding, XivLanguage xivLanguage)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _xivLanguage = xivLanguage;
-            _ex = new Ex(_gameDirectory, _xivLanguage);
+            _ex = new Ex(modding, _xivLanguage);
         }
 
         /// <summary>
@@ -57,7 +58,7 @@ namespace xivModdingFramework.Items.Categories
             var uldLock = new object();
             var uldList = new List<XivUi>();
 
-            var uld = new Uld(_gameDirectory);
+            var uld = new Uld(_modding);
             var uldPaths = await uld.GetTexFromUld();
 
             await Task.Run(() => Parallel.ForEach(uldPaths, (uldPath) =>

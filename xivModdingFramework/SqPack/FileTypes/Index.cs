@@ -36,7 +36,7 @@ namespace xivModdingFramework.SqPack.FileTypes
         private readonly DirectoryInfo _gameDirectory;
         private static SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        public Index(DirectoryInfo gameDirectory)
+        internal Index(DirectoryInfo gameDirectory)
         {
             _gameDirectory = gameDirectory;
         }

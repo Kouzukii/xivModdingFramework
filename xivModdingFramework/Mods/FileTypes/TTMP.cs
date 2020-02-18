@@ -33,12 +33,13 @@ namespace xivModdingFramework.Mods.FileTypes
     {
         private readonly string _currentWizardTTMPVersion = "1.0w";
         private readonly string _currentSimpleTTMPVersion = "1.0s";
-        private string _tempMPD, _tempMPL, _source;
-        private readonly DirectoryInfo _modPackDirectory;
+        private string _tempMPD, _tempMPL;
+        private readonly Modding _modding;
+        private string _source;
 
-        public TTMP(DirectoryInfo modPackDirectory, string source)
+        internal TTMP(Modding modding, string source) 
         {
-            _modPackDirectory = modPackDirectory;
+            _modding = modding;
             _source = source;
         }
 
@@ -142,16 +143,16 @@ namespace xivModdingFramework.Mods.FileTypes
 
                 File.WriteAllText(_tempMPL, JsonConvert.SerializeObject(modPackJson));
 
-                var modPackPath = Path.Combine(_modPackDirectory.FullName, $"{modPackData.Name}.ttmp2");
+                var modPackPath = Path.Combine(_modding.ModPackDirectory.FullName, $"{modPackData.Name}.ttmp2");
 
                 if (File.Exists(modPackPath))
                 {
                     var fileNum = 1;
-                    modPackPath = Path.Combine(_modPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
+                    modPackPath = Path.Combine(_modding.ModPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
                     while (File.Exists(modPackPath))
                     {
                         fileNum++;
-                        modPackPath = Path.Combine(_modPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
+                        modPackPath = Path.Combine(_modding.ModPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
                     }
                 }
 
@@ -181,11 +182,10 @@ namespace xivModdingFramework.Mods.FileTypes
         /// <param name="gameDirectory">The game directory</param>
         /// <param name="progress">The progress of the mod pack creation</param>
         /// <returns>The number of mods processed for the mod pack</returns>
-        public async Task<int> CreateSimpleModPack(SimpleModPackData modPackData, DirectoryInfo gameDirectory, IProgress<(int current, int total, string message)> progress)
+        public async Task<int> CreateSimpleModPack(SimpleModPackData modPackData, IProgress<(int current, int total, string message)> progress)
         {
-            var processCount = await Task.Run<int>(() =>
-            {
-                var dat = new Dat(gameDirectory);
+            var processCount = await Task.Run<int>(() => {
+
                 _tempMPD = Path.GetTempFileName();
                 _tempMPL = Path.GetTempFileName();
                 var modCount = 0;
@@ -216,7 +216,7 @@ namespace xivModdingFramework.Mods.FileTypes
                                 ModOffset = binaryWriter.BaseStream.Position,
                             };
 
-                            var rawData = dat.GetRawData((int) simpleModData.ModOffset,
+                            var rawData = _modding.Dat.GetRawData((int) simpleModData.ModOffset,
                                 XivDataFiles.GetXivDataFile(simpleModData.DatFile),
                                 simpleModData.ModSize);
 
@@ -240,16 +240,16 @@ namespace xivModdingFramework.Mods.FileTypes
 
                     File.WriteAllText(_tempMPL, JsonConvert.SerializeObject(modPackJson));
 
-                    var modPackPath = Path.Combine(_modPackDirectory.FullName, $"{modPackData.Name}.ttmp2");
+                    var modPackPath = Path.Combine(_modding.ModPackDirectory.FullName, $"{modPackData.Name}.ttmp2");
 
                     if (File.Exists(modPackPath))
                     {
                         var fileNum = 1;
-                        modPackPath = Path.Combine(_modPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
+                        modPackPath = Path.Combine(_modding.ModPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
                         while (File.Exists(modPackPath))
                         {
                             fileNum++;
-                            modPackPath = Path.Combine(_modPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
+                            modPackPath = Path.Combine(_modding.ModPackDirectory.FullName, $"{modPackData.Name}({fileNum}).ttmp2");
                         }
                     }
 
@@ -389,12 +389,10 @@ namespace xivModdingFramework.Mods.FileTypes
         /// <param name="modListDirectory">The mod list directory</param>
         /// <param name="progress">The progress of the import</param>
         /// <returns>The number of total mods imported</returns>
-        public async Task<(int ImportCount, string Errors)> ImportModPackAsync(DirectoryInfo modPackDirectory, List<ModsJson> modsJson,
-            DirectoryInfo gameDirectory, DirectoryInfo modListDirectory, IProgress<(int current, int total, string message)> progress)
+        public async Task<(int ImportCount, string Errors)> ImportModPackAsync(DirectoryInfo modPackDirectory, List<ModsJson> modsJson, IProgress<(int current, int total, string message)> progress) 
         {
-            var dat = new Dat(gameDirectory);
             var modListFullPaths = new List<string>();
-            var modList = JsonConvert.DeserializeObject<ModList>(File.ReadAllText(modListDirectory.FullName));
+            var modList = _modding.GetModList();
             var modCount = 1;
             var importErrors = "";
 
@@ -440,7 +438,7 @@ namespace xivModdingFramework.Mods.FileTypes
 
                                                     var data = binaryReader.ReadBytes(modJson.ModSize);
 
-                                                    await dat.WriteToDat(new List<byte>(data), existingEntry,
+                                                    await _modding.Dat.WriteToDat(new List<byte>(data), existingEntry,
                                                         modJson.FullPath,
                                                         modJson.Category.GetDisplayName(), modJson.Name,
                                                         XivDataFiles.GetXivDataFile(modJson.DatFile), _source,
@@ -452,7 +450,7 @@ namespace xivModdingFramework.Mods.FileTypes
 
                                                     var data = binaryReader.ReadBytes(modJson.ModSize);
 
-                                                    await dat.WriteToDat(new List<byte>(data), null, modJson.FullPath,
+                                                    await _modding.Dat.WriteToDat(new List<byte>(data), null, modJson.FullPath,
                                                         modJson.Category.GetDisplayName(), modJson.Name,
                                                         XivDataFiles.GetXivDataFile(modJson.DatFile), _source,
                                                         GetDataType(modJson.FullPath), modJson.ModPackEntry);
@@ -484,9 +482,9 @@ namespace xivModdingFramework.Mods.FileTypes
                 }
             });
 
-            if (modsJson[0].ModPackEntry != null)
+            if (modsJson[0].ModPackEntry != null) 
             {
-                modList = JsonConvert.DeserializeObject<ModList>(File.ReadAllText(modListDirectory.FullName));
+                modList = _modding.GetModList();
 
                 var modPackExists = modList.ModPacks.Any(modpack => modpack.name == modsJson[0].ModPackEntry.name);
 
@@ -495,7 +493,7 @@ namespace xivModdingFramework.Mods.FileTypes
                     modList.ModPacks.Add(modsJson[0].ModPackEntry);
                 }
 
-                File.WriteAllText(modListDirectory.FullName, JsonConvert.SerializeObject(modList, Formatting.Indented));
+                _modding.WriteModList(modList);
             }
 
             return (modCount - 1, importErrors);
@@ -508,12 +506,11 @@ namespace xivModdingFramework.Mods.FileTypes
         /// <param name="modsJson">The list of mods to be imported</param>
         /// <param name="gameDirectory">The game directory</param>
         /// <param name="modListDirectory">The mod list directory</param>
-        public void ImportModPack(DirectoryInfo modPackDirectory, List<ModsJson> modsJson, DirectoryInfo gameDirectory, DirectoryInfo modListDirectory)
+        public void ImportModPack(DirectoryInfo modPackDirectory, List<ModsJson> modsJson) 
         {
-            var dat = new Dat(gameDirectory);
             var modListFullPaths = new List<string>();
-            var modList = JsonConvert.DeserializeObject<ModList>(File.ReadAllText(modListDirectory.FullName));
-
+            var modList = _modding.GetModList();
+            
             foreach (var modListMod in modList.Mods)
             {
                 modListFullPaths.Add(modListMod.fullPath);
@@ -539,7 +536,7 @@ namespace xivModdingFramework.Mods.FileTypes
 
                                     var data = binaryReader.ReadBytes(modJson.ModSize);
 
-                                     dat.WriteToDat(new List<byte>(data), existingEntry, modJson.FullPath,
+                                     _modding.Dat.WriteToDat(new List<byte>(data), existingEntry, modJson.FullPath,
                                         modJson.Category.GetDisplayName(), modJson.Name, XivDataFiles.GetXivDataFile(modJson.DatFile), _source,
                                         GetDataType(modJson.FullPath));
                                 }
@@ -549,7 +546,7 @@ namespace xivModdingFramework.Mods.FileTypes
 
                                     var data = binaryReader.ReadBytes(modJson.ModSize);
 
-                                    dat.WriteToDat(new List<byte>(data), null, modJson.FullPath,
+                                    _modding.Dat.WriteToDat(new List<byte>(data), null, modJson.FullPath,
                                         modJson.Category.GetDisplayName(), modJson.Name, XivDataFiles.GetXivDataFile(modJson.DatFile), _source,
                                         GetDataType(modJson.FullPath));
                                 }

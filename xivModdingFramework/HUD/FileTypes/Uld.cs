@@ -23,6 +23,7 @@ using System.Text;
 using System.Threading.Tasks;
 using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.SqPack.FileTypes;
 
 namespace xivModdingFramework.HUD.FileTypes
@@ -32,11 +33,11 @@ namespace xivModdingFramework.HUD.FileTypes
     /// </summary>
     public class Uld
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
 
-        public Uld(DirectoryInfo gameDirectory)
+        public Uld(Modding modding) 
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
         }
 
         /// <summary>
@@ -47,18 +48,16 @@ namespace xivModdingFramework.HUD.FileTypes
         {
             var uldLock = new object();
             var hashedFolder = HashGenerator.GetHash("ui/uld");
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
 
             var uldStringList = new HashSet<string>();
-            var uldOffsetList = await index.GetAllFileOffsetsInFolder(hashedFolder, XivDataFile._06_Ui);
+            var uldOffsetList = await _modding.Index.GetAllFileOffsetsInFolder(hashedFolder, XivDataFile._06_Ui);
 
             await Task.Run(() => Parallel.ForEach(uldOffsetList, (offset) =>
             {
                 byte[] uldData;
                 try
                 {
-                    uldData = dat.GetType2Data(offset, XivDataFile._06_Ui).Result;
+                    uldData = _modding.Dat.GetType2Data(offset, XivDataFile._06_Ui).Result;
                 }
                 catch (Exception ex)
                 {

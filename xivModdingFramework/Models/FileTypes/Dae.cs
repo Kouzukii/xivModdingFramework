@@ -28,6 +28,7 @@ using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
 using xivModdingFramework.Items.Interfaces;
 using xivModdingFramework.Models.DataContainers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 
 namespace xivModdingFramework.Models.FileTypes
@@ -41,13 +42,13 @@ namespace xivModdingFramework.Models.FileTypes
 
         private static readonly Dictionary<int, SkeletonData> FullSkelNum = new Dictionary<int, SkeletonData>();
 
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivDataFile _dataFile;
         private readonly string _pluginTarget, _appVersion;
 
-        public Dae(DirectoryInfo gameDirectory, XivDataFile dataFile, string pluginTarget, string appVersion = "1.0.0")
+        public Dae(Modding modding, XivDataFile dataFile, string pluginTarget, string appVersion = "1.0.0") 
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _dataFile = dataFile;
             _pluginTarget = pluginTarget;
             _appVersion = appVersion;
@@ -108,7 +109,7 @@ namespace xivModdingFramework.Models.FileTypes
                 {
                     try
                     {
-                        var sklb = new Sklb(_gameDirectory, _dataFile);
+                        var sklb = new Sklb(_modding, _dataFile);
                         await sklb.CreateSkelFromSklb(item, xivModel);
 
                         if (item.ItemCategory.Equals(XivStrings.Head) || item.ItemCategory.Equals(XivStrings.Hair) || item.ItemCategory.Equals(XivStrings.Face))

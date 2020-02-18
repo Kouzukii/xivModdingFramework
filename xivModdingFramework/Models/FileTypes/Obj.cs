@@ -29,11 +29,8 @@ namespace xivModdingFramework.Models.FileTypes
     /// </summary>
     public class Obj
     {
-        private readonly DirectoryInfo _gameDirectory;
-
-        public Obj(DirectoryInfo gameDirectory)
+        public Obj()
         {
-            _gameDirectory = gameDirectory;
         }
 
         /// <summary>

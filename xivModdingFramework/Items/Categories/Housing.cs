@@ -28,6 +28,7 @@ using xivModdingFramework.Helpers;
 using xivModdingFramework.Items.DataContainers;
 using xivModdingFramework.Items.Enums;
 using xivModdingFramework.Items.Interfaces;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 
@@ -35,11 +36,11 @@ namespace xivModdingFramework.Items.Categories
 {
     public class Housing
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivLanguage _xivLanguage;
-        public Housing(DirectoryInfo gameDirectory, XivLanguage xivLanguage)
+        public Housing(Modding modding, XivLanguage xivLanguage) 
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _xivLanguage = xivLanguage;
         }
 
@@ -81,7 +82,7 @@ namespace xivModdingFramework.Items.Categories
             const int itemDataLength = 160;
             const int itemIconDataOffset = 136;
 
-            var ex = new Ex(_gameDirectory, _xivLanguage);
+            var ex = new Ex(_modding, _xivLanguage);
             var housingDictionary = await ex.ReadExData(XivEx.housingfurniture);
             var itemDictionary = await ex.ReadExData(XivEx.item);
 
@@ -159,7 +160,7 @@ namespace xivModdingFramework.Items.Categories
             const int itemDataLength = 160;
             const int itemIconDataOffset = 136;
 
-            var ex = new Ex(_gameDirectory, _xivLanguage);
+            var ex = new Ex(_modding, _xivLanguage);
             var pictureDictionary = await ex.ReadExData(XivEx.picture);
             var itemDictionary = await ex.ReadExData(XivEx.item);
 
@@ -229,7 +230,7 @@ namespace xivModdingFramework.Items.Categories
             const int itemDataLength = 160;
             const int itemIconDataOffset = 136;
 
-            var ex = new Ex(_gameDirectory, _xivLanguage);
+            var ex = new Ex(_modding, _xivLanguage);
             var housingDictionary = await ex.ReadExData(XivEx.housingyardobject);
             var itemDictionary = await ex.ReadExData(XivEx.item);
 
@@ -350,9 +351,6 @@ namespace xivModdingFramework.Items.Categories
         /// <returns>A HousingAssets object containing the asset info</returns>
         private async Task<HousingAssets> GetFurnitureAssets(int modelID, string category)
         {
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
-
             var id = modelID.ToString().PadLeft(4, '0');
 
             var assetFolder = "";
@@ -369,10 +367,10 @@ namespace xivModdingFramework.Items.Categories
                 assetFile = $"gar_b0_m{id}.sgb";
             }
 
-            var assetOffset = await index.GetDataOffset(HashGenerator.GetHash(assetFolder), HashGenerator.GetHash(assetFile),
+            var assetOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(assetFolder), HashGenerator.GetHash(assetFile),
                 XivDataFile._01_Bgcommon);
 
-            var assetData = await dat.GetType2Data(assetOffset, XivDataFile._01_Bgcommon);
+            var assetData = await _modding.Dat.GetType2Data(assetOffset, XivDataFile._01_Bgcommon);
 
             var housingAssets = new HousingAssets();
 
@@ -461,17 +459,14 @@ namespace xivModdingFramework.Items.Categories
         /// <param name="assets">The current asset object</param>
         private async Task GetAdditionalAssets(HousingAssets assets)
         {
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
-
             foreach (var additionalAsset in assets.AdditionalAssetList)
             {
                 var assetFolder = Path.GetDirectoryName(additionalAsset).Replace("\\", "/");
                 var assetFile = Path.GetFileName(additionalAsset);
 
-                var assetOffset = await index.GetDataOffset(HashGenerator.GetHash(assetFolder), HashGenerator.GetHash(assetFile), XivDataFile._01_Bgcommon);
+                var assetOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(assetFolder), HashGenerator.GetHash(assetFile), XivDataFile._01_Bgcommon);
 
-                var assetData = await dat.GetType2Data(assetOffset, XivDataFile._01_Bgcommon);
+                var assetData = await _modding.Dat.GetType2Data(assetOffset, XivDataFile._01_Bgcommon);
 
                 await Task.Run(() =>
                 {
@@ -554,7 +549,6 @@ namespace xivModdingFramework.Items.Categories
         public async Task<List<SearchResults>> SearchHousingByModelID(int modelID, XivItemType type)
         {
             var searchResultsList = new List<SearchResults>();
-            var index = new Index(_gameDirectory);
             var id = modelID.ToString().PadLeft(4, '0');
 
             var folder = "";
@@ -564,7 +558,7 @@ namespace xivModdingFramework.Items.Categories
                 folder = $"bgcommon/hou/indoor/general/{id}/material";
             }
 
-            if (await index.FolderExists(HashGenerator.GetHash(folder), XivDataFile._01_Bgcommon))
+            if (await _modding.Index.FolderExists(HashGenerator.GetHash(folder), XivDataFile._01_Bgcommon))
             {
                 var searchResults = new SearchResults
                 {
@@ -578,7 +572,7 @@ namespace xivModdingFramework.Items.Categories
 
             folder = $"bgcommon/hou/outdoor/general/{id}/material";
 
-            if (await index.FolderExists(HashGenerator.GetHash(folder), XivDataFile._01_Bgcommon))
+            if (await _modding.Index.FolderExists(HashGenerator.GetHash(folder), XivDataFile._01_Bgcommon))
             {
                 var searchResults = new SearchResults
                 {

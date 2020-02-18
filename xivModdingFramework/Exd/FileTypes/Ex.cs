@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using xivModdingFramework.Exd.Enums;
 using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.SqPack.FileTypes;
 
 namespace xivModdingFramework.Exd.FileTypes
@@ -30,13 +31,11 @@ namespace xivModdingFramework.Exd.FileTypes
     /// </summary>
     public class Ex
     {
+        private readonly Modding _modding;
         private const string ExhExtension = ".exh";
         private const string ExdExtension = ".exd";
 
         private readonly string _langCode;
-
-        private readonly Index _index;
-        private readonly Dat _dat;
 
         public Dictionary<int, int> OffsetTypeDict { get; private set; }
 
@@ -50,11 +49,10 @@ namespace xivModdingFramework.Exd.FileTypes
         /// </summary>
         /// <param name="gameDirectory">The install directory for the game.</param>
         /// <param name="lang">The language in which to read the data.</param>
-        public Ex(DirectoryInfo gameDirectory, XivLanguage lang)
+        public Ex(Modding modding, XivLanguage lang) 
         {
+            _modding = modding;
             _langCode = lang.GetLanguageCode();
-            _index = new Index(gameDirectory);
-            _dat = new Dat(gameDirectory);
         }
 
         /// <summary>
@@ -64,11 +62,10 @@ namespace xivModdingFramework.Exd.FileTypes
         /// Used for ex files that do not have language data
         /// </remarks>
         /// <param name="gameDirectory">The install directory for the game.</param>
-        public Ex(DirectoryInfo gameDirectory)
+        public Ex(Modding modding) 
         {
+            _modding = modding;
             _langCode = XivLanguage.English.GetLanguageCode();
-            _index = new Index(gameDirectory);
-            _dat = new Dat(gameDirectory);
         }
 
         /// <summary>
@@ -84,14 +81,14 @@ namespace xivModdingFramework.Exd.FileTypes
             var exdFolderHash = HashGenerator.GetHash("exd");
             var exdFileHash = HashGenerator.GetHash(exFile + ExhExtension);
 
-            var offset = await _index.GetDataOffset(exdFolderHash, exdFileHash, XivDataFile._0A_Exd);
+            var offset = await _modding.Index.GetDataOffset(exdFolderHash, exdFileHash, XivDataFile._0A_Exd);
 
             if (offset == 0)
             {
                 throw new Exception($"Could not find offest for exd/{exFile}{ExhExtension}");
             }
 
-            var exhData = await _dat.GetType2Data(offset, XivDataFile._0A_Exd);
+            var exhData = await _modding.Dat.GetType2Data(offset, XivDataFile._0A_Exd);
 
             await Task.Run(() =>
             {
@@ -174,7 +171,7 @@ namespace xivModdingFramework.Exd.FileTypes
                 var exdFolderHash = HashGenerator.GetHash("exd");
                 var exdFileHash = HashGenerator.GetHash(exdFile);
 
-                exdNameOffsetDictionary.Add(await _index.GetDataOffset(exdFolderHash, exdFileHash, XivDataFile._0A_Exd), exdFile);
+                exdNameOffsetDictionary.Add(await _modding.Index.GetDataOffset(exdFolderHash, exdFileHash, XivDataFile._0A_Exd), exdFile);
             }
 
             await Task.Run(async () =>
@@ -183,7 +180,7 @@ namespace xivModdingFramework.Exd.FileTypes
                 {
                     try
                     {
-                        var exData = await _dat.GetType2Data(exdData.Key, XivDataFile._0A_Exd);
+                        var exData = await _modding.Dat.GetType2Data(exdData.Key, XivDataFile._0A_Exd);
 
                         // Big Endian Byte Order 
                         using (var br = new BinaryReaderBE(new MemoryStream(exData)))

@@ -25,6 +25,7 @@ using xivModdingFramework.General.Enums;
 using xivModdingFramework.Helpers;
 using xivModdingFramework.Mods.DataContainers;
 using xivModdingFramework.Mods.Enums;
+using xivModdingFramework.Mods.FileTypes;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 
@@ -35,28 +36,36 @@ namespace xivModdingFramework.Mods
     /// </summary>
     public class Modding
     {
+        private readonly string _modSource;
         private readonly Version _modlistVersion = new Version(1, 0);
         private readonly JsonSerializer _serializer = new JsonSerializer();
+        private readonly DirectoryInfo _modListDirectory;
+        private ModList _modList;
 
         public DirectoryInfo GameDirectory { get; }
 
         public DirectoryInfo ModPackDirectory { get; }
 
-        public DirectoryInfo ModListDirectory { get; }
-
         public Index Index { get; }
+
+        public ProblemChecker ProblemChecker { get; }
+
+        public Dat Dat { get; }
 
         /// <summary>
         /// Sets the modlist with a provided name
         /// </summary>
         /// <param name="modlistDirectory">The directory in which to place the Modlist</param>
         /// <param name="modListName">The name to give the modlist file</param>
-        public Modding(DirectoryInfo gameDirectory, DirectoryInfo modPackDirectory)
+        public Modding(DirectoryInfo gameDirectory, DirectoryInfo modPackDirectory, string modSource)
         {
+            _modSource = modSource;
             GameDirectory = gameDirectory;
             ModPackDirectory = modPackDirectory;
             Index = new Index(GameDirectory);
-            ModListDirectory = new DirectoryInfo(Path.Combine(GameDirectory.Parent.Parent.FullName, XivStrings.ModlistFilePath));
+            ProblemChecker = new ProblemChecker(this);
+            Dat = new Dat(this);
+            _modListDirectory = new DirectoryInfo(Path.Combine(GameDirectory.Parent.Parent.FullName, XivStrings.ModlistFilePath));
 
         }
 
@@ -75,7 +84,7 @@ namespace xivModdingFramework.Mods
         /// </summary>
         public void CreateModlist()
         {
-            if (File.Exists(ModListDirectory.FullName))
+            if (File.Exists(_modListDirectory.FullName))
             {
                 return;
             }
@@ -91,6 +100,12 @@ namespace xivModdingFramework.Mods
             };
 
             WriteModList(modList);
+        }
+
+        public void DeleteModlist() 
+        {
+            _modList = null;
+            File.Delete(_modListDirectory.FullName);
         }
 
         /// <summary>
@@ -127,11 +142,11 @@ namespace xivModdingFramework.Mods
         /// <param name="dataFile">The data file to check in</param>
         /// <param name="indexCheck">Flag to determine whether to check the index file or just the modlist</param>
         /// <returns></returns>
-        public async Task<XivModStatus> IsModEnabled(string internalPath, bool indexCheck)
+        public async Task<(XivModStatus, string)> IsModEnabled(string internalPath, bool indexCheck)
         {
-            if (!File.Exists(ModListDirectory.FullName))
+            if (!File.Exists(_modListDirectory.FullName))
             {
-                return XivModStatus.Original;
+                return (XivModStatus.Original, null);
             }
 
             if (indexCheck)
@@ -140,7 +155,7 @@ namespace xivModdingFramework.Mods
 
                 if (modEntry == null)
                 {
-                    return XivModStatus.Original;
+                    return (XivModStatus.Original, null);
                 }
 
                 var originalOffset = modEntry.data.originalOffset;
@@ -153,12 +168,12 @@ namespace xivModdingFramework.Mods
 
                 if (offset.Equals(originalOffset))
                 {
-                    return XivModStatus.Disabled;
+                    return (XivModStatus.Disabled, modEntry.modPack?.name);
                 }
 
                 if (offset.Equals(moddedOffset))
                 {
-                    return XivModStatus.Enabled;
+                    return (XivModStatus.Enabled, modEntry.modPack?.name);
                 }
 
                 throw new Exception("Offset in Index does not match either original or modded offset in modlist.");
@@ -169,10 +184,10 @@ namespace xivModdingFramework.Mods
 
                 if (modEntry == null)
                 {
-                    return XivModStatus.Original;
+                    return (XivModStatus.Original, null);
                 }
 
-                return modEntry.enabled ? XivModStatus.Enabled : XivModStatus.Disabled;
+                return (modEntry.enabled ? XivModStatus.Enabled : XivModStatus.Disabled, modEntry.modPack?.name);
             }
         }
 
@@ -414,9 +429,10 @@ namespace xivModdingFramework.Mods
             WriteModList(modList);
         }
 
-        public void WriteModList(ModList modList)
+        public void WriteModList(ModList modList) 
         {
-            using (var stream = File.Open(ModListDirectory.FullName, FileMode.Create, FileAccess.Write, FileShare.None))
+            _modList = null;
+            using (var stream = File.Open(_modListDirectory.FullName, FileMode.Create, FileAccess.Write, FileShare.None))
             using (var writer = new StreamWriter(stream))
             using (var json = new JsonTextWriter(writer))
                 _serializer.Serialize(json, modList);
@@ -424,10 +440,18 @@ namespace xivModdingFramework.Mods
 
         public ModList GetModList()
         {
-            using (var stream = File.OpenRead(ModListDirectory.FullName))
+            if (_modList != null) 
+            {
+                return _modList;
+            }
+            using (var stream = File.OpenRead(_modListDirectory.FullName))
             using (var reader = new StreamReader(stream))
             using (var json = new JsonTextReader(reader))
-                return _serializer.Deserialize<ModList>(json);
+                return _modList = _serializer.Deserialize<ModList>(json);
+        }
+
+        public TTMP NewModPack() {
+            return new TTMP(this, _modSource);
         }
     }
 }

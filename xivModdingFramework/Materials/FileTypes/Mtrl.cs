@@ -28,6 +28,7 @@ using xivModdingFramework.Items.DataContainers;
 using xivModdingFramework.Items.Enums;
 using xivModdingFramework.Items.Interfaces;
 using xivModdingFramework.Materials.DataContainers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 using xivModdingFramework.Textures.DataContainers;
@@ -43,14 +44,14 @@ namespace xivModdingFramework.Materials.FileTypes
     public class Mtrl
     {
         private const string MtrlExtension = ".mtrl";
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivLanguage _language;
         private XivDataFile _dataFile;
         private static SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        public Mtrl(DirectoryInfo gameDirectory, XivDataFile dataFile, XivLanguage lang)
+        public Mtrl(Modding modding, XivDataFile dataFile, XivLanguage lang)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _language = lang;
             DataFile = dataFile;
         }
@@ -74,7 +75,6 @@ namespace xivModdingFramework.Materials.FileTypes
         /// <returns>XivMtrl containing all the mtrl data</returns>
         public async Task<XivMtrl> GetMtrlData(IItemModel itemModel, XivRace race, char part, int dxVersion, string type = "Primary")
         {
-            var index = new Index(_gameDirectory);
             var itemType = ItemType.GetItemType(itemModel);
 
             // Get mtrl path
@@ -82,7 +82,7 @@ namespace xivModdingFramework.Materials.FileTypes
             var mtrlStringPath = $"{mtrlPath.Folder}/{mtrlPath.File}";
 
             // Get mtrl offset
-            var mtrlOffset = await index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
+            var mtrlOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
                 HashGenerator.GetHash(mtrlPath.File),
                 DataFile);
 
@@ -92,7 +92,7 @@ namespace xivModdingFramework.Materials.FileTypes
                 mtrlStringPath = $"{mtrlPath.Folder}/{mtrlPath.File}";
 
                 // Get mtrl offset
-                mtrlOffset = await index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
+                mtrlOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
                     HashGenerator.GetHash(mtrlPath.File),
                     DataFile);
             }
@@ -117,7 +117,7 @@ namespace xivModdingFramework.Materials.FileTypes
                     mtrlStringPath = $"{mtrlPath.Folder}/{mtrlPath.File}";
 
                     // Get mtrl offset
-                    mtrlOffset = await index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
+                    mtrlOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
                         HashGenerator.GetHash(mtrlPath.File),
                         DataFile);
 
@@ -129,7 +129,7 @@ namespace xivModdingFramework.Materials.FileTypes
                         mtrlStringPath = $"{mtrlPath.Folder}/{mtrlPath.File}";
 
                         // Get mtrl offset
-                        mtrlOffset = await index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
+                        mtrlOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(mtrlPath.Folder),
                             HashGenerator.GetHash(mtrlPath.File),
                             DataFile);
 
@@ -149,7 +149,7 @@ namespace xivModdingFramework.Materials.FileTypes
 
             if (mtrlPath.HasVfx)
             {
-                var atex = new ATex(_gameDirectory, DataFile);
+                var atex = new ATex(_modding, DataFile);
                 mtrlData.TextureTypePathList.AddRange(await atex.GetAtexPaths(itemModel));
             }
 
@@ -169,7 +169,6 @@ namespace xivModdingFramework.Materials.FileTypes
         /// <returns>XivMtrl containing all the mtrl data</returns>
         public async Task<XivMtrl> GetMtrlData(IItemModel itemModel, XivRace race, string mtrlFile, int dxVersion)
         {
-            var index = new Index(_gameDirectory);
             var itemType = ItemType.GetItemType(itemModel);
 
             // Secondary model is gear if between 8800 and 8900 instead of weapon
@@ -190,7 +189,7 @@ namespace xivModdingFramework.Materials.FileTypes
             }
 
             // Get mtrl offset
-            var mtrlOffset = await index.GetDataOffset(HashGenerator.GetHash(mtrlFolder), HashGenerator.GetHash(mtrlFile),
+            var mtrlOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(mtrlFolder), HashGenerator.GetHash(mtrlFile),
                 DataFile);
             if (mtrlOffset == 0)
             {
@@ -199,7 +198,7 @@ namespace xivModdingFramework.Materials.FileTypes
                 {
                     var newMtrlFolder = mtrlFolder.Substring(0, mtrlFolder.LastIndexOf("v")) + "v0001";
 
-                    mtrlOffset = await index.GetDataOffset(HashGenerator.GetHash(newMtrlFolder), HashGenerator.GetHash(mtrlFile), DataFile);
+                    mtrlOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(newMtrlFolder), HashGenerator.GetHash(mtrlFile), DataFile);
 
                     if (mtrlOffset == 0)
                     {
@@ -228,11 +227,8 @@ namespace xivModdingFramework.Materials.FileTypes
         /// <returns>XivMtrl containing all the mtrl data</returns>
         public async Task<XivMtrl> GetMtrlData(int mtrlOffset, string mtrlPath, int dxVersion)
         {
-            var dat = new Dat(_gameDirectory);
-            var index = new Index(_gameDirectory);
-
             // Get uncompressed mtrl data
-            var mtrlData = await dat.GetType2Data(mtrlOffset, DataFile);
+            var mtrlData = await _modding.Dat.GetType2Data(mtrlOffset, DataFile);
 
             XivMtrl xivMtrl = null;
 
@@ -331,7 +327,7 @@ namespace xivModdingFramework.Materials.FileTypes
                                 .Replace("\0", "");
                             var dx11FileName = Path.GetFileName(texturePath).Insert(0, "--");
 
-                            if (await index.FileExists(HashGenerator.GetHash(dx11FileName),
+                            if (await _modding.Index.FileExists(HashGenerator.GetHash(dx11FileName),
                                 HashGenerator.GetHash(Path.GetDirectoryName(texturePath).Replace("\\", "/")),
                                 DataFile))
                             {
@@ -627,8 +623,7 @@ namespace xivModdingFramework.Materials.FileTypes
 
                 mtrlBytes.AddRange(xivMtrl.AdditionalData);
 
-                var dat = new Dat(_gameDirectory);
-                return await dat.ImportType2Data(mtrlBytes.ToArray(), item.Name, xivMtrl.MTRLPath, item.ItemCategory, source);
+                return await _modding.Dat.ImportType2Data(mtrlBytes.ToArray(), item.Name, xivMtrl.MTRLPath, item.ItemCategory, source);
             }
             catch(Exception ex)
             {
@@ -758,12 +753,11 @@ namespace xivModdingFramework.Materials.FileTypes
         /// <returns>A list of TexTypePath</returns>
         private async Task<List<TexTypePath>> GetTexNames(IEnumerable<string> texPathList, XivDataFile dataFile)
         {
-            var index = new Index(_gameDirectory);
             var texTypePathList = new List<TexTypePath>();
 
             foreach (var path in texPathList)
             {
-                if (!await index.FileExists(HashGenerator.GetHash(Path.GetFileName(path)),
+                if (!await _modding.Index.FileExists(HashGenerator.GetHash(Path.GetFileName(path)),
                     HashGenerator.GetHash(Path.GetDirectoryName(path).Replace("\\", "/")), dataFile))
                 {
                     continue;
@@ -817,7 +811,7 @@ namespace xivModdingFramework.Materials.FileTypes
             if (itemType != XivItemType.human && itemType != XivItemType.furniture && !type.Equals("Secondary"))
             {
                 // get the items version from the imc file
-                var imc = new Imc(_gameDirectory, DataFile);
+                var imc = new Imc(_modding, DataFile);
                 var imcInfo = await imc.GetImcInfo(itemModel, itemModel.ModelInfo);
                 version = imcInfo.Version.ToString().PadLeft(4, '0');
 
@@ -838,7 +832,7 @@ namespace xivModdingFramework.Materials.FileTypes
                 id = xivGear.SecondaryModelInfo.ModelID.ToString().PadLeft(4, '0');
                 bodyVer = xivGear.SecondaryModelInfo.Body.ToString().PadLeft(4, '0');
 
-                var imc = new Imc(_gameDirectory, DataFile);
+                var imc = new Imc(_modding, DataFile);
                 var imcInfo = await imc.GetImcInfo(itemModel, xivGear.SecondaryModelInfo);
                 version = imcInfo.Version.ToString().PadLeft(4, '0');
 
@@ -960,7 +954,7 @@ namespace xivModdingFramework.Materials.FileTypes
             if (itemType != XivItemType.human && itemType != XivItemType.furniture)
             {
                 // get the items version from the imc file
-                var imc = new Imc(_gameDirectory, DataFile);
+                var imc = new Imc(_modding, DataFile);
                 var imcInfo = await imc.GetImcInfo(itemModel, itemModel.ModelInfo);
                 version = imcInfo.Version.ToString().PadLeft(4, '0');
             }

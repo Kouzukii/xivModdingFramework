@@ -29,6 +29,7 @@ using xivModdingFramework.Helpers;
 using xivModdingFramework.Items.DataContainers;
 using xivModdingFramework.Items.Enums;
 using xivModdingFramework.Items.Interfaces;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 using xivModdingFramework.Variants.FileTypes;
@@ -40,15 +41,15 @@ namespace xivModdingFramework.Items.Categories
     /// </summary>
     public class Companions
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivLanguage _xivLanguage;
         private readonly Ex _ex;
 
-        public Companions(DirectoryInfo gameDirectory, XivLanguage xivLanguage)
+        public Companions(Modding modding, XivLanguage xivLanguage)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _xivLanguage = xivLanguage;
-            _ex = new Ex(_gameDirectory, _xivLanguage);
+            _ex = new Ex(modding, _xivLanguage);
         }
 
         /// <summary>
@@ -71,7 +72,7 @@ namespace xivModdingFramework.Items.Categories
             const int modelCharaIndexOffset = 16;
 
             var minionEx = await _ex.ReadExData(XivEx.companion);
-            var modelCharaEx = await XivModelChara.GetModelCharaData(_gameDirectory);
+            var modelCharaEx = await XivModelChara.GetModelCharaData(_modding);
 
             // Loops through all available minions in the companion exd files
             // At present only one file exists (companion_0)
@@ -137,7 +138,7 @@ namespace xivModdingFramework.Items.Categories
             const int modelCharaIndexOffset = 30;
 
             var mountEx = await _ex.ReadExData(XivEx.mount);
-            var modelCharaEx = await XivModelChara.GetModelCharaData(_gameDirectory);
+            var modelCharaEx = await XivModelChara.GetModelCharaData(_modding);
 
             // Loops through all available mounts in the mount exd files
             // At present only one file exists (mount_0)
@@ -219,7 +220,7 @@ namespace xivModdingFramework.Items.Categories
                 {7103, XivStrings.Placeholder_Egi},
             };
 
-            var modelCharaEx = await XivModelChara.GetModelCharaData(_gameDirectory);
+            var modelCharaEx = await XivModelChara.GetModelCharaData(_modding);
 
             // Loops through the list of indices containing Pet model data
             await Task.Run(() => Parallel.ForEach(petModelIndexList, (petIndex) =>
@@ -283,8 +284,7 @@ namespace xivModdingFramework.Items.Categories
 
             var equipPartDictionary = new Dictionary<string, char[]>();
 
-            var index = new Index(_gameDirectory);
-            var imc = new Imc(_gameDirectory, XivDataFile._04_Chara);
+            var imc = new Imc(_modding, XivDataFile._04_Chara);
             var version = (await imc.GetImcInfo(itemModel, itemModel.ModelInfo)).Version.ToString().PadLeft(4, '0');
 
             var id = itemModel.ModelInfo.ModelID.ToString().PadLeft(4, '0');
@@ -292,7 +292,7 @@ namespace xivModdingFramework.Items.Categories
 
             var mtrlFolder = $"chara/demihuman/d{id}/obj/equipment/e{bodyVer}/material/v{version}";
 
-            var files = await index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), XivDataFile._04_Chara);
+            var files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mtrlFolder), XivDataFile._04_Chara);
 
             foreach (var slotAbr in SlotAbbreviationDictionary)
             {
@@ -315,14 +315,12 @@ namespace xivModdingFramework.Items.Categories
         {
             var equipPartList = new List<string>();
 
-            var index = new Index(_gameDirectory);
-
             var id = itemModel.ModelInfo.ModelID.ToString().PadLeft(4, '0');
             var bodyVer = itemModel.ModelInfo.Body.ToString().PadLeft(4, '0');
 
             var mdlFolder = $"chara/demihuman/d{id}/obj/equipment/e{bodyVer}/model";
 
-            var files = await index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mdlFolder), XivDataFile._04_Chara);
+            var files = await _modding.Index.GetAllHashedFilesInFolder(HashGenerator.GetHash(mdlFolder), XivDataFile._04_Chara);
 
             foreach (var slotAbr in SlotAbbreviationDictionary)
             {
@@ -348,7 +346,6 @@ namespace xivModdingFramework.Items.Categories
             var monsterSearchLock = new object();
             var monsterSearchLock1 = new object();
             var searchResultsList = new List<SearchResults>();
-            var index = new Index(_gameDirectory);
             var id = modelID.ToString().PadLeft(4, '0');
 
             var bodyVariantDictionary = new Dictionary<int, List<int>>();
@@ -372,7 +369,7 @@ namespace xivModdingFramework.Items.Categories
                         }
                     }
 
-                    var variantList = index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
+                    var variantList = _modding.Index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
 
                     if (variantList.Count > 0)
                     {
@@ -404,7 +401,7 @@ namespace xivModdingFramework.Items.Categories
                         }
                     }
 
-                    var variantList = index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
+                    var variantList = _modding.Index.GetFolderExistsList(folderHashDictionary, XivDataFile._04_Chara).Result;
 
                     if (variantList.Count > 0)
                     {

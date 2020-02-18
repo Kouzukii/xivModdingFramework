@@ -24,6 +24,7 @@ using xivModdingFramework.Items;
 using xivModdingFramework.Items.DataContainers;
 using xivModdingFramework.Items.Enums;
 using xivModdingFramework.Items.Interfaces;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Resources;
 using xivModdingFramework.SqPack.FileTypes;
 using xivModdingFramework.Variants.DataContainers;
@@ -36,12 +37,12 @@ namespace xivModdingFramework.Variants.FileTypes
     public class Imc
     {
         private const string ImcExtension = ".imc";
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivDataFile _dataFile;
 
-        public Imc(DirectoryInfo gameDirectory, XivDataFile dataFile)
+        public Imc(Modding modding, XivDataFile dataFile)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _dataFile = dataFile;
         }
 
@@ -63,15 +64,12 @@ namespace xivModdingFramework.Variants.FileTypes
             const int variantLength = 6;
             const int variantSetLength = 30;
 
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
-
             var itemType = ItemType.GetItemType(item);
             var imcPath = GetImcPath(modelInfo, itemType);
 
             var itemCategory = item.ItemCategory;
 
-            var imcOffset = await index.GetDataOffset(HashGenerator.GetHash(imcPath.Folder),
+            var imcOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(imcPath.Folder),
                 HashGenerator.GetHash(imcPath.File), _dataFile);
 
             if (imcOffset == 0)
@@ -82,7 +80,7 @@ namespace xivModdingFramework.Variants.FileTypes
                     itemType = XivItemType.equipment;
                     imcPath = GetImcPath(modelInfo, itemType);
 
-                    imcOffset = await index.GetDataOffset(HashGenerator.GetHash(imcPath.Folder),
+                    imcOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(imcPath.Folder),
                         HashGenerator.GetHash(imcPath.File), _dataFile);
 
                     if (imcOffset == 0)
@@ -98,7 +96,7 @@ namespace xivModdingFramework.Variants.FileTypes
                 }
             }
 
-            var imcData = await dat.GetType2Data(imcOffset, _dataFile);
+            var imcData = await _modding.Dat.GetType2Data(imcOffset, _dataFile);
 
             await Task.Run(() =>
             {
@@ -155,20 +153,17 @@ namespace xivModdingFramework.Variants.FileTypes
         /// <returns>The ImcData data</returns>
         public async Task<ImcData> GetFullImcInfo(IItemModel item, XivModelInfo modelInfo)
         {
-            var index = new Index(_gameDirectory);
-            var dat = new Dat(_gameDirectory);
-
             var itemType = ItemType.GetItemType(item);
             var imcPath = GetImcPath(modelInfo, itemType);
 
-            var imcOffset = await index.GetDataOffset(HashGenerator.GetHash(imcPath.Folder), HashGenerator.GetHash(imcPath.File), _dataFile);
+            var imcOffset = await _modding.Index.GetDataOffset(HashGenerator.GetHash(imcPath.Folder), HashGenerator.GetHash(imcPath.File), _dataFile);
 
             if (imcOffset == 0)
             {
                 throw new Exception($"Could not find offset for {imcPath.Folder}/{imcPath.File}");
             }
 
-            var imcByteData = await dat.GetType2Data(imcOffset, _dataFile);
+            var imcByteData = await _modding.Dat.GetType2Data(imcOffset, _dataFile);
 
             return await Task.Run(() =>
             {

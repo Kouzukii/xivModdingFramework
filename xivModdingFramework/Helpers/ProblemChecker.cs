@@ -19,21 +19,18 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using xivModdingFramework.General.Enums;
+using xivModdingFramework.Mods;
 using xivModdingFramework.SqPack.FileTypes;
 
 namespace xivModdingFramework.Helpers
 {
-    public class ProblemChecker
+    public class ProblemChecker 
     {
-        private readonly DirectoryInfo _gameDirectory;
-        private readonly Index _index;
-        private readonly Dat _dat;
+        private readonly Modding _modding;
 
-        public ProblemChecker(DirectoryInfo gameDirectory)
+        internal ProblemChecker(Modding modding) 
         {
-            _gameDirectory = gameDirectory;
-            _index = new Index(_gameDirectory);
-            _dat = new Dat(_gameDirectory);
+            _modding = modding;
         }
 
         /// <summary>
@@ -44,8 +41,8 @@ namespace xivModdingFramework.Helpers
         {
             return Task.Run(() =>
             {
-                var indexDatCounts = _index.GetIndexDatCount(dataFile);
-                var largestDatNum = _dat.GetLargestDatNumber(dataFile) + 1;
+                var indexDatCounts = _modding.Index.GetIndexDatCount(dataFile);
+                var largestDatNum = _modding.Dat.GetLargestDatNumber(dataFile) + 1;
 
                 if (indexDatCounts.Index1 != largestDatNum)
                 {
@@ -69,12 +66,12 @@ namespace xivModdingFramework.Helpers
         {
             return Task.Run(() =>
             {
-                var largestDatNum = _dat.GetLargestDatNumber(dataFile) + 1;
+                var largestDatNum = _modding.Dat.GetLargestDatNumber(dataFile) + 1;
                 var emptyList = new List<int>();
 
                 for (var i = 0; i < largestDatNum; i++)
                 {
-                    var fileInfo = new FileInfo(Path.Combine(_gameDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.dat{i}"));
+                    var fileInfo = new FileInfo(Path.Combine(_modding.GameDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.dat{i}"));
 
                     if (fileInfo.Length == 0)
                     {
@@ -94,13 +91,13 @@ namespace xivModdingFramework.Helpers
         {
             return Task.Run(() =>
             {
-                var largestDatNum = _dat.GetLargestDatNumber(dataFile) + 1;
+                var largestDatNum = _modding.Dat.GetLargestDatNumber(dataFile) + 1;
 
                 var fileSizeList = new List<long>();
 
                 for (var i = 0; i < largestDatNum; i++)
                 {
-                    var fileInfo = new FileInfo(Path.Combine(_gameDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.dat{i}"));
+                    var fileInfo = new FileInfo(Path.Combine(_modding.GameDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.dat{i}"));
 
                     try
                     {
@@ -128,9 +125,9 @@ namespace xivModdingFramework.Helpers
         {
             return Task.Run(() =>
             {
-                var largestDatNum = _dat.GetLargestDatNumber(dataFile);
+                var largestDatNum = _modding.Dat.GetLargestDatNumber(dataFile);
 
-                _index.UpdateIndexDatCount(dataFile, largestDatNum);
+                _modding.Index.UpdateIndexDatCount(dataFile, largestDatNum);
             });
         }
 
@@ -138,16 +135,16 @@ namespace xivModdingFramework.Helpers
         {
             return Task.Run(async () =>
             {
-                var haveFilesAddedByTexTools = await _index.HaveFilesAddedByTexTools(dataFile);
+                var haveFilesAddedByTexTools = await _modding.Index.HaveFilesAddedByTexTools(dataFile);
                 if (haveFilesAddedByTexTools)
                     return true;
                 var backupDataFile =
                     new DirectoryInfo(Path.Combine(backupsDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.index"));
                 var currentDataFile =
-                    new DirectoryInfo(Path.Combine(_gameDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.index"));
+                    new DirectoryInfo(Path.Combine(_modding.GameDirectory.FullName, $"{dataFile.GetDataFileName()}.win32.index"));
 
-                var backupHash = _index.GetIndexSection1Hash(backupDataFile);
-                var currentHash = _index.GetIndexSection1Hash(currentDataFile);
+                var backupHash = _modding.Index.GetIndexSection1Hash(backupDataFile);
+                var currentHash = _modding.Index.GetIndexSection1Hash(currentDataFile);
                 
                 return backupHash.SequenceEqual(currentHash);
             });

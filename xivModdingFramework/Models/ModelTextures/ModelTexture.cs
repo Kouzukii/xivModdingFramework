@@ -27,6 +27,7 @@ using SixLabors.ImageSharp.Processing.Processors;
 using SixLabors.ImageSharp.Processing.Processors.Filters;
 using xivModdingFramework.Materials.DataContainers;
 using xivModdingFramework.Models.DataContainers;
+using xivModdingFramework.Mods;
 using xivModdingFramework.Textures.Enums;
 using xivModdingFramework.Textures.FileTypes;
 using Color = SharpDX.Color;
@@ -35,13 +36,13 @@ namespace xivModdingFramework.Models.ModelTextures
 {
     public class ModelTexture
     {
+        private readonly Modding _modding;
         private readonly XivMtrl _mtrlData;
-        private readonly DirectoryInfo _gameDirectory;
 
-        public ModelTexture(DirectoryInfo gameDirectory, XivMtrl mtrlData)
+        public ModelTexture(Modding modding, XivMtrl mtrlData)
         {
+            _modding = modding;
             _mtrlData = mtrlData;
-            _gameDirectory = gameDirectory;
         }
 
         /// <summary>
@@ -379,7 +380,7 @@ namespace xivModdingFramework.Models.ModelTextures
         /// <returns>The texure map data</returns>
         private async Task<TexMapData> GetTexMapData()
         {
-            var tex = new Tex(_gameDirectory);
+            var tex = new Tex(_modding);
 
             var texMapData = new TexMapData();
 

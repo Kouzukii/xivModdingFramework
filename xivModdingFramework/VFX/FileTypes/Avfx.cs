@@ -19,18 +19,19 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using xivModdingFramework.General.Enums;
+using xivModdingFramework.Mods;
 using xivModdingFramework.SqPack.FileTypes;
 
 namespace xivModdingFramework.VFX.FileTypes
 {
     public class Avfx
     {
-        private readonly DirectoryInfo _gameDirectory;
+        private readonly Modding _modding;
         private readonly XivDataFile _dataFile;
 
-        public Avfx(DirectoryInfo gameDirectory, XivDataFile dataFile)
+        public Avfx(Modding modding, XivDataFile dataFile)
         {
-            _gameDirectory = gameDirectory;
+            _modding = modding;
             _dataFile = dataFile;
         }
 
@@ -43,9 +44,7 @@ namespace xivModdingFramework.VFX.FileTypes
         {
             var atexList = new List<string>();
 
-            var dat = new Dat(_gameDirectory);
-
-            var avfxData = await dat.GetType2Data(offset, _dataFile);
+            var avfxData = await _modding.Dat.GetType2Data(offset, _dataFile);
 
             await Task.Run(() =>
             {

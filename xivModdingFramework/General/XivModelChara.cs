@@ -22,6 +22,7 @@ using xivModdingFramework.Exd.FileTypes;
 using xivModdingFramework.Helpers;
 using xivModdingFramework.Items.DataContainers;
 using xivModdingFramework.Items.Enums;
+using xivModdingFramework.Mods;
 
 namespace xivModdingFramework.General
 {
@@ -35,9 +36,9 @@ namespace xivModdingFramework.General
         /// </summary>
         /// <param name="gameDirectory"></param>
         /// <returns>Dictionary with modelchara data</returns>
-        public static async Task<Dictionary<int, byte[]>> GetModelCharaData(DirectoryInfo gameDirectory)
+        public static async Task<Dictionary<int, byte[]>> GetModelCharaData(Modding modding)
         {
-            var ex = new Ex(gameDirectory);
+            var ex = new Ex(modding);
             var exData = await ex.ReadExData(XivEx.modelchara);
             return exData;
         }
@@ -48,7 +49,7 @@ namespace xivModdingFramework.General
         /// <param name="gameDirectory">The game directory</param>
         /// <param name="index">The index of the data</param>
         /// <returns>The XivModelInfo data</returns>
-        public static async Task<XivModelInfo> GetModelInfo(DirectoryInfo gameDirectory, int index)
+        public static async Task<XivModelInfo> GetModelInfo(Modding modding, int index)
         {
             var xivModelInfo = new XivModelInfo();
 
@@ -56,7 +57,7 @@ namespace xivModdingFramework.General
             // These will need to be changed if data gets added or removed with a patch
             const int modelDataOffset = 4;
 
-            var ex = new Ex(gameDirectory);
+            var ex = new Ex(modding);
             var modelCharaEx = await ex.ReadExData(XivEx.modelchara);
 
             // Big Endian Byte Order 
